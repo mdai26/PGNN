@@ -251,8 +251,8 @@ def validate(val_loader, model, criterion, test=False):
         if test:
             test_pred = output.data.cpu()
             test_target = targetlist
-            test_preds += test_pred.view(-1).tolist()
-            test_targets += test_target.view(-1).tolist()
+            test_preds += test_pred.tolist()
+            test_targets += test_target.tolist()
 
 
         # measure elapsed time
