@@ -1,0 +1,15 @@
+!!input file for 3D Grain Growth
+0.0625d0		!!dt in second
+8000 	!!steps
+
+64.d0 64.d0 64.d0    !!Length in x, y, z directions
+64 64 64					!!Number of computational cells in xyz directions
+
+kxx kyy kzz				!!xx, yy, zz component of anisotropy gradient coefficient
+1.d0 						!!Grain growth mobility
+1.d0 1.d0 1.d0 				!!Parameters A, B, C
+ninitgorient							!!Number of initial grain orientations 
+0.9999 0.0001				!!Upper and lower limit for small deviations
+0.00001						!!Criteria for existance of grain orientations
+
+500							!!Output per # steps
