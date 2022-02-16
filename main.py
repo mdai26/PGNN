@@ -17,14 +17,14 @@ from model import CrystalGraphConvNet
 
 parser = argparse.ArgumentParser(description='Graph Neural Network for Polygrain conductivity prediction')
 # parameters for loading data
-parser.add_argument('--num_micro', default=10, type=int, help='number of microstructures')
+parser.add_argument('--num_micro', default=50, type=int, help='number of microstructures')
 parser.add_argument('--max_node', default=500, type=int, help='maximum number of nodes')
 parser.add_argument('--num_cond', default=3, type=int, help='number of input conductivity')
 # parameters for splitting data
 parser.add_argument('--batch-size', default=10, type=int, help='mini-batch size (default: 256)')
 parser.add_argument('--random_seed', default=5, type=int, help='random seed for splitting data')
 parser.add_argument('--train_ratio', default=0.8, type=float, help='ratio for training data points')
-parser.add_argument('--val_ratio', default=0.2, type=float, help='ratio of validation data points')
+parser.add_argument('--val_ratio', default=0.1, type=float, help='ratio of validation data points')
 # parameters for model
 parser.add_argument('--node-fea-len', default=64, type=int, help='number of hidden node features in conv layers')
 parser.add_argument('--h-fea-len', default=128, type=int, help='number of hidden features after pooling')
