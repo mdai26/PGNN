@@ -24,36 +24,31 @@ class ConvLayer(nn.Module):
         self.node_fea_len = node_fea_len
         self.edge_fea_len = edge_fea_len
         # fully connected layer (pay attention to dimension)
-        self.fc_full = nn.Linear(2*self.node_fea_len+self.nbr_fea_len,
-                                 self.atom_fea_len)
-        # batch normalization
-        self.bn1 = nn.BatchNorm1d(2*self.atom_fea_len)
+        self.fc_full = nn.Linear(2*self.node_fea_len+self.edge_fea_len,
+                                 self.node_fea_len)
         # activation function
-        self.softplus1 = nn.Softplus()
+        self.relu = nn.ReLU()
 
     def forward(self, nfeature, neighbor, efeature):
         # N is maximum number of nodes 
         # M is number of input node features
         # K is number of edge features
-        N, M = nfeature.shape
-        _, _, K = efeature.shape
+        _, N, M = nfeature.shape
+        _, _, _, K = efeature.shape
         # calculate neighbor node features
         # the dimension of neighbor matrix should be N * (M + K)
         # sum the feature of neighboring nodes
-        node_nbr_fea = torch.matmul(neighbor, nfeature)
+        node_nbr_fea = torch.bmm(neighbor, nfeature)
         # sum the feature of edges
-        edge_nbr_fea = torch.sum(efeature, dim = 1)
+        edge_nbr_fea = torch.sum(efeature, dim = 2)
         # concatenate the two features
-        total_nbr_fea = torch.cat(node_nbr_fea, edge_nbr_fea, dim = 1)
+        total_nbr_fea = torch.cat((node_nbr_fea, edge_nbr_fea), dim = 2)
         # concatenate with the node feature itself
-        total_fea = torch.cat(total_nbr_fea, nfeature)
+        total_fea = torch.cat((total_nbr_fea, nfeature), dim = 2)
         # perform convolution through fully connected layer
         total_gated_fea = self.fc_full(total_fea)
-        # use batch normalization
-        total_gated_fea = self.bn1(total_gated_fea.view(
-            -1, self.atom_fea_len)).view(N, self.atom_fea_len)
         # apply activation function
-        out = self.softplus1(total_gated_fea)
+        out = self.relu(total_gated_fea)
         return out
 
 
@@ -98,10 +93,10 @@ class CrystalGraphConvNet(nn.Module):
         if n_h > 1:
             self.fcs = nn.ModuleList([nn.Linear(h_fea_len, h_fea_len)
                                       for _ in range(n_h-1)])
-            self.softpluses = nn.ModuleList([nn.Softplus()
+            self.relus = nn.ModuleList([nn.ReLU()
                                              for _ in range(n_h-1)])
         # fully connected layer for final input
-        self.totalfc = nn.Sequentail(
+        self.totalfc = nn.Sequential(
                 # 3 here because there are three input conductivity values
                 nn.Linear(max_node * h_fea_len + 3, 1024),
                 nn.ReLU(),
@@ -121,12 +116,12 @@ class CrystalGraphConvNet(nn.Module):
         # activation layer (node-wise)
         nfeature = self.conv_to_fc_softplus(nfeature)
         if hasattr(self, 'fcs') and hasattr(self, 'softpluses'):
-            for fc, softplus in zip(self.fcs, self.softpluses):
-                nfeature = softplus(fc(nfeature))
+            for fc, relu in zip(self.fcs, self.relus):
+                nfeature = relu(fc(nfeature))
         # flatten the feature matrix (dimension now should be max_node * h_fea_len)
-        nfeature = torch.flatten(nfeature)
+        nfeature = nfeature.view(nfeature.size()[0],-1)
         # concatenate the input conductivity
-        totinput = torch.cat((nfeature,incod))
+        totinput = torch.cat((nfeature,incod),1)
         # go through fully connected layer
         out = self.totalfc(totinput)
         return out

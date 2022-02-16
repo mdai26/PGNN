@@ -18,10 +18,10 @@ from model import CrystalGraphConvNet
 parser = argparse.ArgumentParser(description='Graph Neural Network for Polygrain conductivity prediction')
 # parameters for loading data
 parser.add_argument('--num_micro', default=10, type=int, help='number of microstructures')
-parser.add_argument('--max_node', default=300, type=int, help='maximum number of nodes')
+parser.add_argument('--max_node', default=500, type=int, help='maximum number of nodes')
 parser.add_argument('--num_cond', default=3, type=int, help='number of input conductivity')
 # parameters for splitting data
-parser.add_argument('--batch-size', default=32, type=int, help='mini-batch size (default: 256)')
+parser.add_argument('--batch-size', default=10, type=int, help='mini-batch size (default: 256)')
 parser.add_argument('--random_seed', default=5, type=int, help='random seed for splitting data')
 parser.add_argument('--train_ratio', default=0.8, type=float, help='ratio for training data points')
 parser.add_argument('--val_ratio', default=0.2, type=float, help='ratio of validation data points')
@@ -33,15 +33,15 @@ parser.add_argument('--n-h', default=1, type=int, help='number of hidden layers 
 # parameters for using CUDA or not
 parser.add_argument('--disable-cuda', action='store_true',help='Disable CUDA')
 # parameters for optimizer
-parser.add_argument('--optim', default='SGD', type=str, help='choose an optimizer, SGD or Adam, (default: SGD)')
+parser.add_argument('--optim', default='Adam', type=str, help='choose an optimizer, SGD or Adam, (default: SGD)')
 parser.add_argument('--momentum', default=0.9, type=float, help='momentum')
 parser.add_argument('--weight-decay', '--wd', default=0, type=float,help='weight decay (default: 0)')
-parser.add_argument('--lr', '--learning-rate', default=0.01, type=float,help='initial learning rate (default: 0.01)')
+parser.add_argument('--lr', '--learning-rate', default=1e-6, type=float,help='initial learning rate (default: 0.01)')
 # parameters for checking points
-parser.add_argument('--resume', default='', type=str, help='path to latest checkpoint (default: none)')
+parser.add_argument('--resume', default='checkpoints/', type=str, help='path to latest checkpoint (default: none)')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
 # parameters for training
-parser.add_argument('--epochs', default=30, type=int, metavar='N',
+parser.add_argument('--epochs', default=10, type=int, metavar='N',
                     help='number of total epochs to run (default: 30)')
 parser.add_argument('--print-freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
@@ -82,6 +82,7 @@ def main():
                                 h_fea_len=args.h_fea_len,
                                 n_h=args.n_h)
     
+    model = model.float()
     # not sure if this is suitable, just keep it for now.
     if args.cuda:
         model.cuda()
@@ -160,21 +161,21 @@ def train(train_loader, model, criterion, optimizer, epoch):
         data_time.update(time.time() - end)
 
         if args.cuda:
-            nfeature = Variable(nfeature.cuda(non_blocking=True))
-            neighlist = Variable(neighlist.cuda(non_blocking=True))
-            efeature = Variable(efeature.cuda(non_blocking=True))
-            incondlist = Variable(incondlist.cuda(non_blocking=True))
-            targetlist = Variable(targetlist.cuda(non_blocking=True))
+            nfeature = Variable(nfeature.cuda(non_blocking=True).float())
+            neighlist = Variable(neighlist.cuda(non_blocking=True).float())
+            efeature = Variable(efeature.cuda(non_blocking=True).float())
+            incondlist = Variable(incondlist.cuda(non_blocking=True).float())
+            targetlist = Variable(targetlist.cuda(non_blocking=True).float())
         else:
-            nfeature = Variable(nfeature)
-            neighlist = Variable(neighlist)
-            efeature = Variable(efeature)
-            incondlist = Variable(incondlist)
-            targetlist = Variable(targetlist)
+            nfeature = Variable(nfeature.float())
+            neighlist = Variable(neighlist.float())
+            efeature = Variable(efeature.float())
+            incondlist = Variable(incondlist.float())
+            targetlist = Variable(targetlist.float())
         if args.cuda:
-            targetlist = Variable(targetlist.cuda(non_blocking=True))
+            targetlist = Variable(targetlist.cuda(non_blocking=True).float())
         else:
-            targetlist = Variable(targetlist)
+            targetlist = Variable(targetlist.float())
 
         # compute output
         output = model(nfeature, neighlist, efeature, incondlist)
@@ -205,11 +206,10 @@ def train(train_loader, model, criterion, optimizer, epoch):
                 )
 
 
-def validate(val_loader, model, criterion, normalizer, test=False):
+def validate(val_loader, model, criterion, test=False):
     batch_time = AverageMeter()
     losses = AverageMeter()
-    if args.task == 'regression':
-        mae_errors = AverageMeter()
+    mae_errors = AverageMeter()
     if test:
         test_targets = []
         test_preds = []
@@ -221,24 +221,24 @@ def validate(val_loader, model, criterion, normalizer, test=False):
     for i, (nfeature, neighlist, efeature, incondlist, targetlist) in enumerate(val_loader):
         if args.cuda:
             with torch.no_grad():
-                nfeature = Variable(nfeature.cuda(non_blocking=True))
-                neighlist = Variable(neighlist.cuda(non_blocking=True))
-                efeature = Variable(efeature.cuda(non_blocking=True))
-                incondlist = Variable(incondlist.cuda(non_blocking=True))
-                targetlist = Variable(targetlist.cuda(non_blocking=True))
+                nfeature = Variable(nfeature.cuda(non_blocking=True).float())
+                neighlist = Variable(neighlist.cuda(non_blocking=True).float())
+                efeature = Variable(efeature.cuda(non_blocking=True).float())
+                incondlist = Variable(incondlist.cuda(non_blocking=True).float())
+                targetlist = Variable(targetlist.cuda(non_blocking=True).float())
         else:
             with torch.no_grad():
-                nfeature = Variable(nfeature)
-                neighlist = Variable(neighlist)
-                efeature = Variable(efeature)
-                incondlist = Variable(incondlist)
-                targetlist = Variable(targetlist)
+                nfeature = Variable(nfeature.float())
+                neighlist = Variable(neighlist.float())
+                efeature = Variable(efeature.float())
+                incondlist = Variable(incondlist.float())
+                targetlist = Variable(targetlist.float())
         if args.cuda:
             with torch.no_grad():
-                targetlist = Variable(targetlist.cuda(non_blocking=True))
+                targetlist = Variable(targetlist.cuda(non_blocking=True).float())
         else:
             with torch.no_grad():
-                targetlist = Variable(targetlist)
+                targetlist = Variable(targetlist.float())
 
         # compute output
         output = model(nfeature, neighlist, efeature, incondlist)

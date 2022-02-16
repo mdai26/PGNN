@@ -25,7 +25,7 @@ class polygrainDS(Dataset):
     def __init__(self, num_micro, max_node, num_cond):
         
         # read the conductivity and calculated results from "conductivity.csv"
-        condfile = 'conductivity.csv'
+        condfile = 'data/conductivity.csv'
         incod, target = readcond(num_micro, num_cond, condfile)
         # specify the final list
 #        nfeature, neighlist, efeature = [], [], []
@@ -33,77 +33,76 @@ class polygrainDS(Dataset):
         # go through data points
         for i in range(num_micro):
             # read node feature
-            filenode = 'feature_%d.txt' % i
+            filenode = 'data/feature_%d.txt' % i
             nodefeature = readnode(filenode,max_node)
             # read neighborlist, edgeid and edgefeature
-            fileedge = 'edge_%d.txt' % i
+            fileedge = 'data/edge_%d.txt' % i
             neighbor, edgefeature = readedge(fileedge, max_node)
             # put data into the final list
             for j in range(num_cond):
                 if (i == 0) and (j == 0):
-                    nfeature, neighblist, efeature, incondlist, targetlist = nodefeature, neighbor, edgefeature, incod[i,j,:], target[i,j,:]
+                    nfeature, neighblist, efeature, incondlist, targetlist = [nodefeature], [neighbor], [edgefeature], [incod[i,j,:]], [target[i,j,:]]
                 else:
-                    nfeature, neighblist, efeature, incondlist, targetlist = np.concatenate((nfeature, nodefeature)), \
-                                                                             np.concatenate((neighblist, neighbor)), \
-                                                                             np.concatenate((efeature, edgefeature)), \
-                                                                             np.concatenate((incondlist, incod[i,j,:])),\
-                                                                             np.concatenate((targetlist, target[i,j,:]))
+                    nfeature, neighblist, efeature, incondlist, targetlist = np.concatenate((nfeature, [nodefeature])), \
+                                                                             np.concatenate((neighblist, [neighbor])), \
+                                                                             np.concatenate((efeature, [edgefeature])), \
+                                                                             np.concatenate((incondlist, [incod[i,j,:]])),\
+                                                                             np.concatenate((targetlist, [target[i,j,:]]))
                 
-        self.nfeature = nfeature
-        self.neighblist = neighblist
-        self.efeature = efeature
-        self.incondlist = incondlist
-        self.targetlist = targetlist
+        self.nfeature = np.array(nfeature)
+        self.neighblist = np.array(neighblist)
+        self.efeature = np.array(efeature)
+        self.incondlist = np.array(incondlist)
+        self.targetlist = np.array(targetlist)
         
         print('Dataset')
-        print('Node feature matrix shape: ', np.shape(nfeature))
-        print('Neighbor list shape :', np.shape(neighblist))
-        print('edge feature shape :', np.shape(efeature))
-        print('input conductivity shape :', np.shape(incondlist))
-        print('target conductivity shape: ', np.shape(targetlist))
+        print('Node feature matrix shape: ', self.nfeature.shape)
+        print('Neighbor list shape :', self.neighblist.shape)
+        print('edge feature shape :', self.efeature.shape)
+        print('input conductivity shape :', self.incondlist.shape)
+        print('target conductivity shape: ', self.targetlist.shape)
     
     def __len__(self):
         return len(self.efeature)
     
     def __getitem__(self,dataid):
         nfeature = self.nfeature[dataid]
-        neighlist = self.neighlist[dataid]
+        neighblist = self.neighblist[dataid]
         efeature = self.efeature[dataid]
         incondlist = self.incondlist[dataid]
         targetlist = self.targetlist[dataid]
         
         nfeature = torch.from_numpy(nfeature)
-        neighlist = torch.from_numpy(neighlist)
+        neighblist = torch.from_numpy(neighblist)
         efeature = torch.from_numpy(efeature)
         incondlist = torch.from_numpy(incondlist)
         targetlist = torch.from_numpy(targetlist)
         
-        return nfeature, neighlist, efeature, incondlist, targetlist
+        return nfeature, neighblist, efeature, incondlist, targetlist
         
 
 
 def readcond(num_data, num_cond, condfile):
     # read initial conductivity and calculated conductivity from file
-    df = pd.read_csv(condfile)
+    df = pd.read_csv(condfile,index_col=0)
     data = df.to_numpy()
     # specify the array of input conductivity and target
     incod = np.zeros((np.shape(data)[0],num_cond,3))
     target = np.zeros((np.shape(data)[0],num_cond,3))
     for i in range(np.shape(data)[0]):
-        for j in num_cond:
+        for j in range(num_cond):
             # read input conductivity
             incod[i,j,0] = 3.2 * np.power(10, data[i,1 + j * 4])
             incod[i,j,1] = 3.2 * np.power(10, data[i,1 + j * 4])
             incod[i,j,2] = 1.6 * np.power(10, data[i,1 + j * 4])
             # read output conductivity
-            target[i,j,1:3] = data[i,(2 + j * 4) : (5 + j * 4)]
+            target[i,j,0:3] = data[i,(2 + j * 4) : (5 + j * 4)]
             
     return incod, target
 
 def readnode(filenode, max_node):
     # read node data from file
-    df = pd.read_csv(filenode)
-    data = df.to_numpy()
+    data = np.loadtxt(filenode, skiprows = 1)
     # put node feature in the numpy matrix with correct shape
     fea_node = np.zeros((max_node, np.shape(data)[1]))
     fea_node[:np.shape(data)[0], :np.shape(data)[1]] = data
@@ -112,8 +111,7 @@ def readnode(filenode, max_node):
 
 def readedge(fileedge, max_node):
     # read edge data from file
-    df = pd.read_csv(fileedge)
-    data = df.to_numpy()
+    data = np.loadtxt(fileedge,dtype=int)
     # neighborlist: document the neighbors of each node
     # data type: list of lists
     neighborlist = np.zeros((max_node, max_node))
