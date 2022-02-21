@@ -182,7 +182,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
         loss = criterion(output, targetlist)
 
         # measure accuracy and record loss
-        mae_error = mae(output.data.cpu(), targetlist)
+        mae_error = mae(output.data.cpu(), targetlist.cpu())
         losses.update(loss.data.cpu(), targetlist.size(0))
         mae_errors.update(mae_error, targetlist.size(0))
 
@@ -245,7 +245,7 @@ def validate(val_loader, model, criterion, test=False):
         loss = criterion(output, targetlist)
 
         # measure accuracy and record loss
-        mae_error = mae(output.data.cpu(), targetlist)
+        mae_error = mae(output.data.cpu(), targetlist.cpu())
         losses.update(loss.data.cpu().item(), targetlist.size(0))
         mae_errors.update(mae_error, targetlist.size(0))
         if test:
