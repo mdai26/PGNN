@@ -19,3 +19,7 @@ python readcond.py
 ```
 python main.py
 ```
+#### To run it on Euler GPU
+```
+sbatch run.sh
+```
