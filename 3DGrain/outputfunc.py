@@ -6,6 +6,8 @@ Created on Thu Jan 13 17:22:59 2022
 """
 
 import os
+import numpy as np
+from pyevtk.hl import gridToVTK
 
 def outputeuler(eulerang,path,dataid,Nx,Ny,Nz):
     filename = 'eulerAng_%d.in' % dataid
@@ -28,3 +30,19 @@ def outputstruct(mark,path,dataid,Nx,Ny,Nz):
                         ofile.write("%6d%6d%6d%6d\n" % (i+1,j+1,k+1,2))
                     else:
                         ofile.write("%6d%6d%6d%6d\n" % (i+1,j+1,k+1,1))
+                        
+def outputvtk(mark, newmark, path, dataid, Nx, Ny, Nz):
+    # specify location
+    x = np.zeros((Nx, Ny, Nz))
+    y = np.zeros((Nx, Ny, Nz))
+    z = np.zeros((Nx, Ny, Nz))
+    for k in range(Nz):
+        for j in range(Ny):
+            for i in range(Nx):
+                x[i,j,k] = i 
+                y[i,j,k] = j 
+                z[i,j,k] = k
+    # specify filename
+    filename = "./mark_and_newmark_%d" % dataid
+    gridToVTK(filename, x, y, z, pointData = {"mark": mark, "newmark": newmark})
+    

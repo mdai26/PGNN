@@ -7,37 +7,80 @@ Created on Fri Jan 14 08:40:26 2022
 
 import numpy as np
 import os
-from ngrain import findneigbhors
+import math
 
-def findedge(i,j,k,Nx,Ny,Nz,newmark):
-    edge = set()
-    visited = np.ones((Nx,Ny,Nz))
-    l_layer = [[i,j,k]]
-    while len(edge) < 2:
-        for element in l_layer:
-            visited[element[0],element[1],element[2]] = 0
-            if newmark[element[0],element[1],element[2]] != 0:
-                edge.add(newmark[element[0],element[1],element[2]])
-                if len(edge) == 2:
-                    return edge
-        nl_layer = []
-        for element in l_layer:
-            posspoints = findneigbhors(element[0],element[1],element[2],Nx,Ny,Nz)
-            # check if six neighbors is visited or not
-            for point in posspoints:
-                if visited[point[0],point[1],point[2]] == 1:
-                    nl_layer.append(point)
-        
-        l_layer = nl_layer
+def mean_var(meanold,varold,n,point):
+    meannew = ((n-1)*meanold + point)/n
+    varnew = (n-1)*varold/n + (n-1)*(meanold-point)**2/n**2
+    return meannew, varnew
+
+def findpos(newmark, ngrain, Nx, Ny, Nz):
+    # define the average and variance of position
+    avepos = np.zeros((ngrain,3))
+    varpos = np.zeros((ngrain,3))
+    # define number of grids
+    gsize = np.zeros((ngrain,1))
+    # start to calculate the position
+    cubesize = np.array([Nx, Ny, Nz])
+    for i in range(Nx):
+        for j in range(Ny):
+            for k in range(Nz):
+                gid = int(newmark[i,j,k])
+                # for grain 
+                if gid != 0:
+                    gsize[gid-1, 0] += 1                    
+                    point = np.array([i,j,k])
+                    for dimen in range(3):
+                        ave = np.zeros(3); var = np.zeros(3)
+                        # get the average and variance of point with/without periodic treatment
+                        ave[0], var[0] = mean_var(avepos[gid-1,dimen],varpos[gid-1,dimen],gsize[gid-1,0],point[dimen])
+                        ave[1], var[1] = mean_var(avepos[gid-1,dimen],varpos[gid-1,dimen],gsize[gid-1,0],point[dimen]-cubesize[dimen])
+                        ave[2], var[2] = mean_var(avepos[gid-1,dimen],varpos[gid-1,dimen],gsize[gid-1,0],point[dimen]+cubesize[dimen])
+                        # choose one with smallest variance
+                        minsitu = np.where(var == np.amin(var))[0]
+                        # add a check
+                        if len(minsitu) > 1: minsitu = minsitu[0]
+                        avepos[gid-1,dimen] = ave[minsitu]; varpos[gid-1,dimen] = var[minsitu]
+    
+    # final check of average position
+    for number in range(ngrain):
+        for dimen in range(3):
+            if avepos[number,dimen] < 0:
+                avepos[number,dimen] = avepos[number,dimen] + cubesize[dimen]
+            if avepos[number,dimen] >= cubesize[dimen]:
+                avepos[number,dimen] = avepos[number,dimen] - cubesize[dimen]
+    
+    return avepos, gsize
+
+def findedge(avepos,gsize,ngrain, Nx, Ny, Nz):
+    edgelist = []
+    # calculate equivalent radius
+    radius = np.zeros((ngrain,1))
+    if (Nx > 1) and (Ny > 1) and (Nz > 1):
+        radius[:,0] = (3*gsize[:,0]/(4*math.pi))**(1/3.)
+    else:
+        radius[:,0] = (gsize[:,0]/math.pi)**(1/2)
+    
+    cubesize = np.array([Nx, Ny, Nz])    
+    for i in range(ngrain):
+        for j in range(i+1,ngrain):
+            diff = np.zeros(3)
+            for dimen in range(3):
+                diff[dimen] = min(abs(avepos[i,dimen]-avepos[j,dimen]),cubesize[dimen]-abs(avepos[i,dimen]-avepos[j,dimen]))
+            
+            if np.linalg.norm(diff) <= radius[i,0] + radius[j,0] +1 :
+                edgelist.append([i,j])
+                
+    return edgelist
+
+
     
 
 
 def extractfeature(newmark, eulerang, ngrain, path, dataid, Nx, Ny, Nz):
-    # average position
-    avepos = np.zeros((ngrain,3))
-    # grain size
-    gsize = np.zeros((ngrain,1))
-    # euler angle
+    # find position and gsize
+    avepos, gsize = findpos(newmark, ngrain, Nx, Ny, Nz)
+    # get average euler angles
     geuler = np.zeros((ngrain,3))
     
     for i in range(Nx):
@@ -46,12 +89,6 @@ def extractfeature(newmark, eulerang, ngrain, path, dataid, Nx, Ny, Nz):
                 gid = int(newmark[i,j,k])
                 # for grain 
                 if gid != 0:
-                    # calculate the sum of positions
-                    avepos[gid-1,0] += i
-                    avepos[gid-1,1] += j
-                    avepos[gid-1,2] += k
-                    # calculate the grain size
-                    gsize[gid-1,0] += 1
                     # calculate sum of euler angels
                     geuler[gid-1,0] += eulerang[i,j,k,0]
                     geuler[gid-1,1] += eulerang[i,j,k,1]
@@ -59,7 +96,6 @@ def extractfeature(newmark, eulerang, ngrain, path, dataid, Nx, Ny, Nz):
     
     # do average
     for i in range(ngrain):
-        avepos[i,:] = avepos[i,:]/gsize[i,0]
         geuler[i,:] = geuler[i,:]/gsize[i,0]
         
     # output
@@ -76,20 +112,7 @@ def extractfeature(newmark, eulerang, ngrain, path, dataid, Nx, Ny, Nz):
                            geuler[i,0], geuler[i,1], geuler[i,2]))
     
     # get the edge between grains
-    edgelist = []
-    gblist = []
-    # get grain boundary elements
-    for i in range(Nx):
-        for j in range(Ny):
-            for k in range(Nz):
-                if newmark[i,j,k]==0:
-                    gblist.append([i,j,k])
-    # calculate the edges
-    for gb in gblist:
-        edgelist.append(findedge(gb[0],gb[1],gb[2],Nx,Ny,Nz,newmark))
-    
-    # get the list of edges
-    edgelist = [list(x) for x in set(tuple(x) for x in edgelist)]
+    edgelist = findedge(avepos, gsize, ngrain, Nx, Ny, Nz)
     
     # output edges
     filename = 'edge_%d.txt' % dataid
