@@ -32,6 +32,8 @@ ngrainmax = 500
 
 # specify intial id
 dataid = 0
+# specify output file name
+fsummary = open('summary.txt','w')
 # go through the loops
 for kxx in kxxlist:
     for kyy in kyylist:
@@ -56,6 +58,9 @@ for kxx in kxxlist:
                                         'norient' : norient, \
                                         'step' : nstep, \
                                         'total grains' : ngrain}, ignore_index=True)
+                        # write to file
+                        fsummary.write('%5d%8.2f%8.2f%8.2f%5d%5d%5d\n' % (dataid, kxx, kyy, kzz, norient, nstep, ngrain))
+                        fsummary.flush()
                         # read euler angles from file
                         infilename2 = 'kxx_%.2f_kyy_%.2f_kzz_%.2f_norient_%d/eulerAng_%08d.in' % (kxx, kyy, kzz, norient, nstep)
                         eulerang = readeulerfile(path, infilename2, Nx, Ny, Nz)
@@ -70,5 +75,6 @@ for kxx in kxxlist:
                     else:
                         print('exceed limit! file name: kxx_%.2f_kyy_%.2f_kzz_%.2f_norient_%d_nstep_%d' % (kxx, kyy, kzz, norient, nstep), flush = True)
 
+fsummary.close()
 dffilename = 'data.csv'
 df.to_csv(os.path.join(path,dffilename))
