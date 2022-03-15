@@ -155,7 +155,7 @@ def getneighbor(i,j,k,Nx,Ny,Nz,periodic):
 
 def addboundary(mark, periodic):
     Nx, Ny, Nz = mark.shape
-    grainmark = np.ones((Nx,Ny,Nz))
+    grainmark = np.copy(mark)
     for i in range(Nx):
         for j in range(Ny):
             for k in range(Nz):
@@ -164,7 +164,7 @@ def addboundary(mark, periodic):
                 neighbors = getneighbor(i,j,k,Nx,Ny,Nz,periodic)
                 for n in neighbors:
                     if mark[n[0],n[1],n[2]] != mark0:
-                        grainmark[i,j,k] = 2
+                        grainmark[i,j,k] = 0
                         break
     
     return grainmark

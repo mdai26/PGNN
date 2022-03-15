@@ -7,7 +7,8 @@ Created on Fri Mar 11 10:27:44 2022
 
 import numpy as np
 import voronoi
-from pyevtk.hl import gridToVTK
+import featurecal
+import outputfunc
 import math
 
 
@@ -56,7 +57,7 @@ def caldist(i, j, k, center, Nx, Ny, Nz):
 
 def addboundarywwidth(ngrain, gcenter, neighbor, mark, gbwidth):
     Nx, Ny, Nz = mark.shape
-    grainmark = np.ones((Nx, Ny, Nz))
+    grainmark = np.copy(mark)
     for i in range(Nx):
         for j in range(Ny):
             for k in range(Nz):
@@ -71,38 +72,64 @@ def addboundarywwidth(ngrain, gcenter, neighbor, mark, gbwidth):
                     difdist[num] = caldist(i, j, k, gcenter[n], Nx, Ny, Nz)
                 difdist = np.sort(difdist)
                 if abs(difdist[0] - difdist0) <= gbwidth:
-                    grainmark[i,j,k] = 2
+                    grainmark[i,j,k] = 0
 
     
     return grainmark
 
-def outputvtk(mark, newmark, dataid, Nx, Ny, Nz):
-    # specify location
-    x = np.zeros((Nx, Ny, Nz))
-    y = np.zeros((Nx, Ny, Nz))
-    z = np.zeros((Nx, Ny, Nz))
-    for k in range(Nz):
+def geteuler(igrain, grainmark):
+    # get random euler angles of each grain
+    alphalist = np.random.uniform(0, 360, igrain)
+    betalist = np.random.uniform(0, 180, igrain)
+    gammalist = np.random.uniform(0, 360, igrain)
+    # get size of the euler angle array
+    Nx, Ny, Nz = grainmark.shape
+    eulerang = np.zeros((Nx, Ny, Nz, 3))
+    for i in range(Nx):
         for j in range(Ny):
-            for i in range(Nx):
-                x[i,j,k] = i 
-                y[i,j,k] = j 
-                z[i,j,k] = k
-    # specify filename
-    filename = "./mark_and_newmark_%d" % dataid
-    gridToVTK(filename, x, y, z, pointData = {"mark": mark, "newmark": newmark})
-                        
+            for k in range(Nz):
+                gmark0 = grainmark[i, j, k]
+                # for grain: assign euler angles based on the generated list
+                if gmark0 != 0:
+                    eulerang[i, j, k, 0] = alphalist[int(gmark0 - 1)]
+                    eulerang[i, j, k, 1] = betalist[int(gmark0 - 1)]
+                    eulerang[i, j, k, 2] = gammalist[int(gmark0 - 1)]
+                # for grain boundary: give random euler angles
+                else:
+                    eulerang[i, j, k, 0] = np.random.uniform(0, 360)
+                    eulerang[i, j, k, 1] = np.random.uniform(0, 180)
+                    eulerang[i, j, k, 2] = np.random.uniform(0, 360)
+    
+    euleranglist = np.concatenate((alphalist.reshape(-1,1), betalist.reshape(-1,1), gammalist.reshape(-1,1)), axis = 1)
+    return eulerang, euleranglist
+
+def getstructure(grainmark):
+    Nx, Ny, Nz = grainmark.shape
+    # for grain: the structure id is 1
+    structure = np.ones((Nx, Ny, Nz))
+    for i in range(Nx):
+        for j in range(Ny):
+            for k in range(Nz):
+                # for grain boundary: the structure id is 2
+                if grainmark[i, j, k] == 0:
+                    structure[i, j, k] = 2
+                    
+    return structure
+ 
+                       
 
 # set random seed
-np.random.seed(20)
+random_seed = 20
+np.random.seed(random_seed)
 # specify the limit of number of grains
 lowerlimit = 10
-upperlimit = 11
+upperlimit = 20
 # specify number of microstructures
-ndata = 1
+ndata = 3
 # get the number of grain array
 ngrain = np.random.randint(lowerlimit, upperlimit, ndata, dtype=int)
 # define number of grain thickness
-gbwidth = 3
+gbwidth = 1
 # define dimension of the microstruture
 Nx = 64; Ny = 64; Nz = 64
 # define randome walk for grain center
@@ -123,8 +150,35 @@ for i in range(ndata):
         grainmark = voronoi.addboundary(mark, periodic)
     else:
         grainmark = addboundarywwidth(igrain, gcenter, neighbor, mark, gbwidth)
+    # assign euler angle
+    eulerang, euleranglist = geteuler(igrain, grainmark)
+    # get structure
+    structure = getstructure(grainmark)
+    # get grain feature
+    featurecal.extractfeature(grainmark, euleranglist, igrain, i, Nx, Ny, Nz)
+    # output euler angles structures and neighbolist
+    outputfunc.outputeuler(eulerang, i, Nx, Ny, Nz)
+    outputfunc.outputstruct(structure, "struct", i, Nx, Ny, Nz)
+    outputfunc.outputneighbor(neighbor, i, Nx, Ny, Nz)
+    # output mark
+    outputfunc.outputstruct(grainmark, "grainmark", i, Nx, Ny, Nz)
+    outputfunc.outputvtk(mark, structure, i, Nx, Ny, Nz)
     
-    outputvtk(mark, grainmark, i, Nx, Ny, Nz)
-    
+
+# save data information to a file
+filename = 'information.txt'
+with open(filename, 'w') as ofile:
+    ofile.write("microstructure shape: (%d, %d, %d)\n" % (Nx, Ny, Nz))
+    ofile.write("random seed: %d\n" % random_seed)
+    ofile.write("lower limit: %d, upper limit: %d\n" % (lowerlimit, upperlimit))
+    ofile.write("grain boundary widt: %d\n" % gbwidth)
+    ofile.write("random walk steps: %d\n" % gbwidth)
+    ofile.write("periodic flag: %s\n" % periodic)
+    ofile.write("start the number of grains list\n")
+    for i in range(ndata):
+        ofile.write("%d\n" % ngrain[i])
+        
+        
+
         
         
