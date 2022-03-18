@@ -98,14 +98,14 @@ class CrystalGraphConvNet(nn.Module):
         # fully connected layer for final input
         self.totalfc = nn.Sequential(
                 # 3 here because there are three input conductivity values
-                nn.Linear(max_node * h_fea_len + 3, 1024),
+                nn.Linear(max_node * h_fea_len, 1024),
                 nn.ReLU(),
                 nn.Linear(1024, 128),
                 nn.ReLU(),
                 nn.Linear(128,3)
         )
 
-    def forward(self, nfeature, neighbor, efeature, incod):
+    def forward(self, nfeature, neighbor, efeature):
         # first fully connected layer (node-wise)
         nfeature = self.embedding(nfeature)
         # several convolutions (node-wise)
@@ -120,10 +120,8 @@ class CrystalGraphConvNet(nn.Module):
                 nfeature = relu(fc(nfeature))
         # flatten the feature matrix (dimension now should be max_node * h_fea_len)
         nfeature = nfeature.view(nfeature.size()[0],-1)
-        # concatenate the input conductivity
-        totinput = torch.cat((nfeature,incod),1)
         # go through fully connected layer
-        out = self.totalfc(totinput)
+        out = self.totalfc(nfeature)
         return out
 
 

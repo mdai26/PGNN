@@ -13,6 +13,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import random
+import os
 from torch.utils.data.sampler import SubsetRandomSampler
 
 # feature list #
@@ -22,110 +23,111 @@ from torch.utils.data.sampler import SubsetRandomSampler
 # target
 
 class polygrainDS(Dataset):
-    def __init__(self, num_micro, max_node, num_cond):
-        
-        # read the conductivity and calculated results from "conductivity.csv"
-        condfile = 'data/conductivity.csv'
-        incod, target = readcond(num_micro, num_cond, condfile)
-        # specify the final list
-#        nfeature, neighlist, efeature = [], [], []
-#        incondlist, targetlist = [], []
-        # go through data points
-        for i in range(num_micro):
-            # read node feature
-            filenode = 'data/feature_%d.txt' % i
-            nodefeature = readnode(filenode,max_node)
-            # read neighborlist, edgeid and edgefeature
-            fileedge = 'data/edge_%d.txt' % i
-            neighbor, edgefeature = readedge(fileedge, max_node)
-            # put data into the final list
-            for j in range(num_cond):
-                if (i == 0) and (j == 0):
-                    nfeature, neighblist, efeature, incondlist, targetlist = [nodefeature], [neighbor], [edgefeature], [incod[i,j,:]], [target[i,j,:]]
+    def __init__(self, group, max_node):
+        # There are 100 data points in each group
+        numdata = 100
+        # specify grain boundary thickness
+        gbwidth = 1
+        # read data from each group
+        for g in range(1, group+1):
+            # read conductivity file first
+            foldername = '%d' % g
+            condfile = os.path.join(foldername, 'finalconductivity.txt')
+            gcond, gbcond, calcond = readcond(condfile, numdata)
+            # go through each data in the group
+            for n in range(numdata):
+                # read node feature
+                filenode = '%d/feature_%d.txt' % (g, n)
+                nodefeature = readnode(filenode,max_node,gcond[n,:])
+                # read neighbor and edgefeature
+                fileneighbor = '%d/neighbor_%d.txt' % (g, n)
+                neighbor, edgefeature = readneighbor(fileneighbor, max_node, gbcond[n,:], gbwidth)
+                # put data into the final list
+                if (g == 1) and (n == 0):
+                    nfeature, neighblist, efeature, targetlist = [nodefeature], [neighbor], [edgefeature], [calcond[n,:]]
                 else:
-                    nfeature, neighblist, efeature, incondlist, targetlist = np.concatenate((nfeature, [nodefeature])), \
+                    nfeature, neighblist, efeature, targetlist = np.concatenate((nfeature, [nodefeature])), \
                                                                              np.concatenate((neighblist, [neighbor])), \
                                                                              np.concatenate((efeature, [edgefeature])), \
-                                                                             np.concatenate((incondlist, [incod[i,j,:]])),\
-                                                                             np.concatenate((targetlist, [target[i,j,:]]))
-                
+                                                                             np.concatenate((targetlist, [calcond[n,:]]))
+        
+        targetlist = normalize(targetlist)
+
         self.nfeature = np.array(nfeature)
         self.neighblist = np.array(neighblist)
         self.efeature = np.array(efeature)
-        self.incondlist = np.array(incondlist)
         self.targetlist = np.array(targetlist)
         
-        print('Dataset')
-        print('Node feature matrix shape: ', self.nfeature.shape)
-        print('Neighbor list shape :', self.neighblist.shape)
-        print('edge feature shape :', self.efeature.shape)
-        print('input conductivity shape :', self.incondlist.shape)
-        print('target conductivity shape: ', self.targetlist.shape)
+        print('Dataset', flush = True)
+        print('Node feature matrix shape: ', self.nfeature.shape, flush = True)
+        print('Neighbor list shape :', self.neighblist.shape, flush = True)
+        print('edge feature shape :', self.efeature.shape, flush = True)
+        print('target conductivity shape: ', self.targetlist.shape, flush = True)
     
     def __len__(self):
-        return len(self.efeature)
+        return len(self.nfeature)
     
     def __getitem__(self,dataid):
         nfeature = self.nfeature[dataid]
         neighblist = self.neighblist[dataid]
         efeature = self.efeature[dataid]
-        incondlist = self.incondlist[dataid]
         targetlist = self.targetlist[dataid]
         
         nfeature = torch.from_numpy(nfeature)
         neighblist = torch.from_numpy(neighblist)
         efeature = torch.from_numpy(efeature)
-        incondlist = torch.from_numpy(incondlist)
         targetlist = torch.from_numpy(targetlist)
         
-        return nfeature, neighblist, efeature, incondlist, targetlist
+        return nfeature, neighblist, efeature, targetlist
         
 
 
-def readcond(num_data, num_cond, condfile):
-    # read initial conductivity and calculated conductivity from file
-    df = pd.read_csv(condfile,index_col=0)
-    data = df.to_numpy()
-    # specify the array of input conductivity and target
-    incod = np.zeros((np.shape(data)[0],num_cond,3))
-    target = np.zeros((np.shape(data)[0],num_cond,3))
-    for i in range(np.shape(data)[0]):
-        for j in range(num_cond):
-            # read input conductivity
-            incod[i,j,0] = 3.2 * np.power(10, data[i,1 + j * 4])
-            incod[i,j,1] = 3.2 * np.power(10, data[i,1 + j * 4])
-            incod[i,j,2] = 1.6 * np.power(10, data[i,1 + j * 4])
-            # read output conductivity
-            target[i,j,0:3] = data[i,(2 + j * 4) : (5 + j * 4)]
-            
-    return incod, target
+def readcond(condfile,numdata):
+    # conductivity from file
+    cond = np.loadtxt(condfile)
+    gcond = np.copy(cond[:numdata,0:3])
+    gbcond = np.copy(cond[:numdata,3:6])
+    calcond = np.copy(cond[:numdata,6:9])
+    return gcond, gbcond, calcond
 
-def readnode(filenode, max_node):
+
+def readnode(filenode, max_node, gcond):
     # read node data from file
     data = np.loadtxt(filenode, skiprows = 1)
     # put node feature in the numpy matrix with correct shape
-    fea_node = np.zeros((max_node, np.shape(data)[1]))
+    fea_node = np.zeros((max_node, int(np.shape(data)[1]+3)))
     fea_node[:np.shape(data)[0], :np.shape(data)[1]] = data
+    fea_node[:np.shape(data)[0], np.shape(data)[1]:] = gcond
     
     return fea_node
 
-def readedge(fileedge, max_node):
-    # read edge data from file
-    data = np.loadtxt(fileedge,dtype=int)
-    # neighborlist: document the neighbors of each node
-    # data type: list of lists
-    neighborlist = np.zeros((max_node, max_node))
-    # edge feature: the feature of each edge
-    # data type: list
-    edgefeature = np.zeros((max_node, max_node, 3))
-    # initial value of edge id is 0
-    for i in range(len(data)):
-        neighborlist[data[i,0],data[i,1]] = 1
-        edgefeature[data[i,0], data[i,1],:] = [3.2e-5, 3.2e-5, 1.6e-5]
-        neighborlist[data[i,1],data[i,0]] = 1
-        edgefeature[data[i,1], data[i,0],:] = [3.2e-5, 3.2e-5, 1.6e-5]
-        
-    return neighborlist, edgefeature
+def readneighbor(fileneighbor, max_node, gbcond, gbwidth):
+    # read neighbor data from file
+    data = np.loadtxt(fileneighbor,dtype=int)
+    # specify the size of neighbor
+    neighbor = np.zeros((max_node, max_node))
+    # specify the size of edge features (3 conductivity and 1 thickness)
+    edgefeature = np.zeros((max_node, max_node, 4))
+    # put data into neighbor
+    neighbor[:np.shape(data)[0], :np.shape(data)[1]] = data
+    # put edge feature into data
+    for i in range(np.shape(data)[0]):
+        for j in range(np.shape(data)[1]):
+            if neighbor[i,j] == 1:
+                edgefeature[i,j,:3] = gbcond
+                edgefeature[i,j, 3] = gbwidth
+
+    return neighbor, edgefeature
+
+def normalize(targetlist):
+    t_mean = np.mean(targetlist)
+    t_std = np.std(targetlist)
+    targetlist = (targetlist - t_mean) / t_std
+    # save norm
+    norm = np.array([t_mean, t_std])
+    np.savez_compressed('norm.npz', norm = norm)
+
+    return targetlist
 
 def get_train_val_test_loader(dataset, random_seed, batch_size, train_ratio, val_ratio, pin_memory):
     # get the number of total data points and shuffle it

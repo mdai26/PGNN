@@ -5,6 +5,7 @@ import sys
 import time
 import csv
 
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -17,9 +18,8 @@ from model import CrystalGraphConvNet
 
 parser = argparse.ArgumentParser(description='Graph Neural Network for Polygrain conductivity prediction')
 # parameters for loading data
-parser.add_argument('--num_micro', default=50, type=int, help='number of microstructures')
-parser.add_argument('--max_node', default=500, type=int, help='maximum number of nodes')
-parser.add_argument('--num_cond', default=3, type=int, help='number of input conductivity')
+parser.add_argument('--group', default=10, type=int, help='groups of data')
+parser.add_argument('--max_node', default=400, type=int, help='maximum number of nodes')
 # parameters for splitting data
 parser.add_argument('--batch-size', default=10, type=int, help='mini-batch size (default: 256)')
 parser.add_argument('--random_seed', default=5, type=int, help='random seed for splitting data')
@@ -41,7 +41,7 @@ parser.add_argument('--lr', '--learning-rate', default=1e-6, type=float,help='in
 parser.add_argument('--resume', default='checkpoints/', type=str, help='path to latest checkpoint (default: none)')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
 # parameters for training
-parser.add_argument('--epochs', default=10, type=int, metavar='N',
+parser.add_argument('--epochs', default=1000, type=int, metavar='N',
                     help='number of total epochs to run (default: 30)')
 parser.add_argument('--print-freq', '-p', default=10, type=int,
                     metavar='N', help='print frequency (default: 10)')
@@ -65,14 +65,14 @@ def main():
     global args, best_mae_error
 
     # load data
-    dataset = polygrainDS(args.num_micro, args.max_node, args.num_cond)
+    dataset = polygrainDS(args.group, args.max_node)
     # data split
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset, args.random_seed, args.batch_size, args.train_ratio, args.val_ratio, args.cuda)
 
     # build model
     # get the number of node feature and edge feature
-    nfeature, _, efeature, _, _ = dataset[0]
+    nfeature, _, efeature, _ = dataset[0]
     orig_atom_fea_len = nfeature.shape[1]
     edge_fea_len = efeature.shape[2]
     # build model
@@ -102,16 +102,16 @@ def main():
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
-            print("=> loading checkpoint '{}'".format(args.resume))
+            print("=> loading checkpoint '{}'".format(args.resume),flush=True)
             checkpoint = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
             best_mae_error = checkpoint['best_mae_error']
             model.load_state_dict(checkpoint['state_dict'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             print("=> loaded checkpoint '{}' (epoch {})"
-                  .format(args.resume, checkpoint['epoch']))
+                  .format(args.resume, checkpoint['epoch']), flush = True)
         else:
-            print("=> no checkpoint found at '{}'".format(args.resume))
+            print("=> no checkpoint found at '{}'".format(args.resume), flush = True)
 
     scheduler = MultiStepLR(optimizer, milestones=args.lr_milestones,gamma=0.1)
 
@@ -123,7 +123,7 @@ def main():
         mae_error = validate(val_loader, model, criterion)
 
         if mae_error != mae_error:
-            print('Exit due to NaN')
+            print('Exit due to NaN', flush = True)
             sys.exit(1)
 
         scheduler.step()
@@ -140,7 +140,7 @@ def main():
         }, is_best)
 
     # test best model
-    print('---------Evaluate Model on Test Set---------------')
+    print('---------Evaluate Model on Test Set---------------', flush = True)
     best_checkpoint = torch.load('model_best.pth.tar')
     model.load_state_dict(best_checkpoint['state_dict'])
     validate(test_loader, model, criterion, test=True)
@@ -156,7 +156,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
     model.train()
 
     end = time.time()
-    for i, (nfeature, neighlist, efeature, incondlist, targetlist) in enumerate(train_loader):
+    for i, (nfeature, neighlist, efeature, targetlist) in enumerate(train_loader):
         # measure data loading time
         data_time.update(time.time() - end)
 
@@ -164,13 +164,11 @@ def train(train_loader, model, criterion, optimizer, epoch):
             nfeature = Variable(nfeature.cuda(non_blocking=True).float())
             neighlist = Variable(neighlist.cuda(non_blocking=True).float())
             efeature = Variable(efeature.cuda(non_blocking=True).float())
-            incondlist = Variable(incondlist.cuda(non_blocking=True).float())
             targetlist = Variable(targetlist.cuda(non_blocking=True).float())
         else:
             nfeature = Variable(nfeature.float())
             neighlist = Variable(neighlist.float())
             efeature = Variable(efeature.float())
-            incondlist = Variable(incondlist.float())
             targetlist = Variable(targetlist.float())
         if args.cuda:
             targetlist = Variable(targetlist.cuda(non_blocking=True).float())
@@ -178,7 +176,7 @@ def train(train_loader, model, criterion, optimizer, epoch):
             targetlist = Variable(targetlist.float())
 
         # compute output
-        output = model(nfeature, neighlist, efeature, incondlist)
+        output = model(nfeature, neighlist, efeature)
         loss = criterion(output, targetlist)
 
         # measure accuracy and record loss
@@ -200,10 +198,9 @@ def train(train_loader, model, criterion, optimizer, epoch):
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'MAE {mae_errors.val:.3f} ({mae_errors.avg:.3f})'.format(
+                  'MAE {mae_errors.val:.3e} ({mae_errors.avg:.3e})'.format(
                   epoch, i, len(train_loader), batch_time=batch_time,
-                  data_time=data_time, loss=losses, mae_errors=mae_errors)
-                )
+                  data_time=data_time, loss=losses, mae_errors=mae_errors), flush = True)
 
 
 def validate(val_loader, model, criterion, test=False):
@@ -218,20 +215,18 @@ def validate(val_loader, model, criterion, test=False):
     model.eval()
 
     end = time.time()
-    for i, (nfeature, neighlist, efeature, incondlist, targetlist) in enumerate(val_loader):
+    for i, (nfeature, neighlist, efeature, targetlist) in enumerate(val_loader):
         if args.cuda:
             with torch.no_grad():
                 nfeature = Variable(nfeature.cuda(non_blocking=True).float())
                 neighlist = Variable(neighlist.cuda(non_blocking=True).float())
                 efeature = Variable(efeature.cuda(non_blocking=True).float())
-                incondlist = Variable(incondlist.cuda(non_blocking=True).float())
                 targetlist = Variable(targetlist.cuda(non_blocking=True).float())
         else:
             with torch.no_grad():
                 nfeature = Variable(nfeature.float())
                 neighlist = Variable(neighlist.float())
                 efeature = Variable(efeature.float())
-                incondlist = Variable(incondlist.float())
                 targetlist = Variable(targetlist.float())
         if args.cuda:
             with torch.no_grad():
@@ -241,7 +236,7 @@ def validate(val_loader, model, criterion, test=False):
                 targetlist = Variable(targetlist.float())
 
         # compute output
-        output = model(nfeature, neighlist, efeature, incondlist)
+        output = model(nfeature, neighlist, efeature)
         loss = criterion(output, targetlist)
 
         # measure accuracy and record loss
@@ -251,6 +246,8 @@ def validate(val_loader, model, criterion, test=False):
         if test:
             test_pred = output.data.cpu()
             test_target = targetlist
+            test_pred = denormalize(test_pred)
+            test_target = denormalize(targetlist)
             test_preds += test_pred.tolist()
             test_targets += test_target.tolist()
 
@@ -263,9 +260,9 @@ def validate(val_loader, model, criterion, test=False):
             print('Test: [{0}/{1}]\t'
                   'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
                   'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'MAE {mae_errors.val:.3f} ({mae_errors.avg:.3f})'.format(
+                  'MAE {mae_errors.val:.3e} ({mae_errors.avg:.3e})'.format(
                    i, len(val_loader), batch_time=batch_time, loss=losses,
-                   mae_errors=mae_errors))
+                   mae_errors=mae_errors), flush = True)
 
     if test:
         star_label = '**'
@@ -276,8 +273,8 @@ def validate(val_loader, model, criterion, test=False):
     else:
         star_label = '*'
         
-    print(' {star} MAE {mae_errors.avg:.3f}'.format(star=star_label,
-                                                        mae_errors=mae_errors))
+    print(' {star} MAE {mae_errors.avg:.3e}'.format(star=star_label,
+                                                        mae_errors=mae_errors), flush = True)
     return mae_errors.avg
 
 
@@ -291,7 +288,17 @@ def mae(prediction, target):
     prediction: torch.Tensor (N, 1)
     target: torch.Tensor (N, 1)
     """
+    # do de-normalization
+    prediction = denormalize(prediction)
+    target = denormalize(target)
+
     return torch.mean(torch.abs(target - prediction))
+
+def denormalize(target):
+    norm = np.load('norm.npz', allow_pickle = True)['norm']
+    t_norm = torch.from_numpy(norm)
+    target = target * t_norm[1] + t_norm[0]
+    return target
 
 class AverageMeter(object):
     """Computes and stores the average and current value"""
