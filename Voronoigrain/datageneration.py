@@ -119,13 +119,13 @@ def getstructure(grainmark):
                        
 
 # set random seed
-random_seed = 20
+random_seed = 10
 np.random.seed(random_seed)
 # specify the limit of number of grains
 lowerlimit = 10
-upperlimit = 20
+upperlimit = 400
 # specify number of microstructures
-ndata = 3
+ndata = 100
 # get the number of grain array
 ngrain = np.random.randint(lowerlimit, upperlimit, ndata, dtype=int)
 # define number of grain thickness
