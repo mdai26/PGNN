@@ -20,7 +20,7 @@ from torch.utils.data.sampler import SubsetRandomSampler
 class CNNpolygrain(Dataset):
     def __init__(self, group, Nx, Ny, Nz):
         # There are 100 data points in each group
-        numdata = 4
+        numdata = 100
         for g in range(1, group+1):
             # read conductivity file first
             foldername = '%d' % g
@@ -43,7 +43,7 @@ class CNNpolygrain(Dataset):
                 else:
                     gimagelist, targetlist = np.concatenate((gimagelist, [gimage])), \
                                             np.concatenate((targetlist, [calcond[n,:]]))
-                print("successfully read data %d from group %d" % (n, g), flush = True)
+                #print("successfully read data %d from group %d" % (n, g), flush = True)
                 
         self.gimagelist = np.array(gimagelist)
         self.targetlist = np.array(targetlist)
