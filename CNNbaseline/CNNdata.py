@@ -9,44 +9,41 @@ Created on Wed Feb  9 23:09:27 2022
 
 from __future__ import print_function
 import numpy as np
+import os
 import torch
 from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import random
 from torch.utils.data.sampler import SubsetRandomSampler
 
-# feature list #
-# grain_matrix [max_node, num_feature]
-# neighbor_list [max_node, num_edge]
-# conduct
-# target
 
 class CNNpolygrain(Dataset):
-    def __init__(self, num_micro, num_cond, Nx, Ny, Nz):
-        
-        # read the conductivity and calculated results from "conductivity.csv"
-        condfile = 'struct_and_eulerang/conductivity.csv'
-        incod, target = readcond(num_micro, num_cond, condfile)
-        # go through data points
-        for i in range(num_micro):
-            # read 3 structure id
-            fstruct = 'struct_and_eulerang/struct_%d.in' % i
-            struct = readstruct(fstruct, Nx, Ny, Nz)
-            # read euler angle
-            feulerang = 'struct_and_eulerang/eulerAng_%d.in' % i
-            eulerang = readeulerang(feulerang, Nx, Ny, Nz)
-            # put data into the final list
-            for j in range(num_cond):
+    def __init__(self, group, Nx, Ny, Nz):
+        # There are 100 data points in each group
+        numdata = 4
+        for g in range(1, group+1):
+            # read conductivity file first
+            foldername = '%d' % g
+            condfile = os.path.join(foldername, 'finalconductivity.txt')
+            gcond, gbcond, calcond = readcond(condfile, numdata)
+            # go through data points
+            for n in range(numdata):
+                # read structure file
+                fstruct = '%s/struct_%d.in' % (foldername, n)
+                struct = readstruct(fstruct, Nx, Ny, Nz)
+                # read euler angle
+                feulerang = '%s/eulerAng_%d.in' % (foldername, n)
+                eulerang = readeulerang(feulerang, Nx, Ny, Nz)
                 # get the conductivity matrix according to the structure id
-                cond = getcond(struct,incod[i,j,:])
+                conductivity = getcond(struct,gcond[n,:],gbcond[n,:])
                 # combine the conductivity matrix and the euler angle matrix
-                gimage = getimage(cond, eulerang)
-                # concatenate data points
-                if (i == 0) and (j == 0):
-                    gimagelist, targetlist = [gimage],[target[i,j,:]]
+                gimage = getimage(conductivity, eulerang)
+                if (g == 1) and (n == 0):
+                    gimagelist, targetlist = [gimage],[calcond[n,:]]
                 else:
                     gimagelist, targetlist = np.concatenate((gimagelist, [gimage])), \
-                                            np.concatenate((targetlist, [target[i,j,:]]))
+                                            np.concatenate((targetlist, [calcond[n,:]]))
+                print("successfully read data %d from group %d" % (n, g), flush = True)
                 
         self.gimagelist = np.array(gimagelist)
         self.targetlist = np.array(targetlist)
@@ -69,23 +66,13 @@ class CNNpolygrain(Dataset):
         
 
 
-def readcond(num_data, num_cond, condfile):
-    # read initial conductivity and calculated conductivity from file
-    df = pd.read_csv(condfile,index_col=0)
-    data = df.to_numpy()
-    # specify the array of input conductivity and target
-    incod = np.zeros((np.shape(data)[0],num_cond,3))
-    target = np.zeros((np.shape(data)[0],num_cond,3))
-    for i in range(np.shape(data)[0]):
-        for j in range(num_cond):
-            # read input conductivity
-            incod[i,j,0] = 3.2 * np.power(10, data[i,1 + j * 4])
-            incod[i,j,1] = 3.2 * np.power(10, data[i,1 + j * 4])
-            incod[i,j,2] = 1.6 * np.power(10, data[i,1 + j * 4])
-            # read output conductivity
-            target[i,j,0:3] = data[i,(2 + j * 4) : (5 + j * 4)]
-            
-    return incod, target
+def readcond(condfile,numdata):
+    # conductivity from file
+    cond = np.loadtxt(condfile)
+    gcond = np.copy(cond[:numdata,0:3])
+    gbcond = np.copy(cond[:numdata,3:6])
+    calcond = np.copy(cond[:numdata,6:9])
+    return gcond, gbcond, calcond
 
 def readstruct(fstruct, Nx, Ny, Nz):
     # read structure data from file
@@ -107,16 +94,16 @@ def readeulerang(feulerang, Nx, Ny, Nz):
     
     return eulerang
 
-def getcond(struct,incod):
+def getcond(struct,gcond,gbcond):
     Nx, Ny, Nz = struct.shape
     cond = np.zeros((Nx, Ny, Nz, 3))
     for i in range(Nx):
         for j in range(Ny):
             for k in range(Nz):
                 if struct[i,j,k] == 1:
-                    cond[i,j,k,:] = 3.2e-5, 3.2e-5, 1.6e-5
+                    cond[i,j,k,:] = gcond
                 else:
-                    cond[i,j,k,:] = incod
+                    cond[i,j,k,:] = gbcond
     
     return cond
 
