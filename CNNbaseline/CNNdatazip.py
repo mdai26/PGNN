@@ -44,7 +44,7 @@ def readcond(condfile,numdata, upperlimit, lowerlimit):
     # conductivity from file
     cond = normcond(np.loadtxt(condfile),upperlimit, lowerlimit)
     gcond = np.copy(cond[:numdata,0:3])
-    gbcond = npi.copy(cond[:numdata,3:6])
+    gbcond = np.copy(cond[:numdata,3:6])
     calcond = np.copy(cond[:numdata,6:9])
     return gcond, gbcond, calcond
 
@@ -101,6 +101,8 @@ if __name__ == '__main__':
     given_args = parser.parse_args()
     group = given_args.group
     numdata = given_args.numdata
+    upperlimit = given_args.upperlimit
+    lowerlimit = given_args.lowerlimit
 
     Nx = 64; Ny = 64; Nz = 64
     gimagelist, targetlist = loaddata(group, numdata, Nx, Ny, Nz, upperlimit, lowerlimit)
