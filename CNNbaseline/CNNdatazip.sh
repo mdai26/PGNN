@@ -5,7 +5,7 @@
 #SBATCH -o CNN-%j.out
 #SBATCH -e CNN-%j.err
 #SBATCH --mem=16gb
-#SBATCH --array=1-30%1
+#SBATCH --array=1-50%20
 
 module load anaconda/mini/4.9.2
 bootstrap_conda

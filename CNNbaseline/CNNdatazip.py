@@ -87,7 +87,7 @@ def getimage(cond, eulerang):
 
 
 def normcond(cond, upperlimit, lowerlimit):
-    cond = np.log(cond)
+    cond = np.log10(cond)
     cond = (cond - lowerlimit) / (upperlimit - lowerlimit)
 
     return cond
