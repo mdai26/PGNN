@@ -12,13 +12,13 @@ import torch.optim as optim
 from torch.autograd import Variable
 from torch.optim.lr_scheduler import MultiStepLR
 
-from data import polygrainDS
+from data import polygrainzipdata
 from data import get_train_val_test_loader
 from model import CrystalGraphConvNet
 
 parser = argparse.ArgumentParser(description='Graph Neural Network for Polygrain conductivity prediction')
 # parameters for loading data
-parser.add_argument('--group', default=10, type=int, help='groups of data')
+parser.add_argument('--group', default=50, type=int, help='groups of data')
 parser.add_argument('--max_node', default=400, type=int, help='maximum number of nodes')
 # parameters for splitting data
 parser.add_argument('--batch-size', default=10, type=int, help='mini-batch size (default: 256)')
@@ -41,9 +41,9 @@ parser.add_argument('--lr', '--learning-rate', default=1e-6, type=float,help='in
 parser.add_argument('--resume', default='checkpoints/', type=str, help='path to latest checkpoint (default: none)')
 parser.add_argument('--start-epoch', default=0, type=int, help='manual epoch number (useful on restarts)')
 # parameters for training
-parser.add_argument('--epochs', default=1000, type=int, metavar='N',
+parser.add_argument('--epochs', default=50, type=int, metavar='N',
                     help='number of total epochs to run (default: 30)')
-parser.add_argument('--print-freq', '-p', default=10, type=int,
+parser.add_argument('--print-freq', '-p', default=50, type=int,
                     metavar='N', help='print frequency (default: 10)')
 
 
@@ -63,9 +63,22 @@ best_mae_error = 1e10
 
 def main():
     global args, best_mae_error
+    
+    # keep the same results on different devices
+    os.environ['PYTHONHASHargs.seed'] = str(args.random_seed)
+    os.environ["CUBLAS_WORKSPACE_CONFIG"]=":4096:8"
+    np.random.seed(args.random_seed)
+    torch.manual_seed(args.random_seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(args.random_seed)
+        torch.cuda.manual_seed_all(args.random_seed)
+    torch.backends.cudnn.deterministic = True
+    #torch.backends.cudnn.benchmark = False
+    torch.use_deterministic_algorithms(True)
+
 
     # load data
-    dataset = polygrainDS(args.group, args.max_node)
+    dataset = polygrainzipdata(args.group)
     # data split
     train_loader, val_loader, test_loader = get_train_val_test_loader(
         dataset, args.random_seed, args.batch_size, args.train_ratio, args.val_ratio, args.cuda)
@@ -120,7 +133,7 @@ def main():
         train(train_loader, model, criterion, optimizer, epoch)
 
         # evaluate on validation set
-        mae_error = validate(val_loader, model, criterion)
+        mae_error = validate(val_loader, model, criterion, epoch)
 
         if mae_error != mae_error:
             print('Exit due to NaN', flush = True)
@@ -143,7 +156,7 @@ def main():
     print('---------Evaluate Model on Test Set---------------', flush = True)
     best_checkpoint = torch.load('model_best.pth.tar')
     model.load_state_dict(best_checkpoint['state_dict'])
-    validate(test_loader, model, criterion, test=True)
+    validate(test_loader, model, criterion, epoch, test=True)
 
 
 def train(train_loader, model, criterion, optimizer, epoch):
@@ -193,17 +206,16 @@ def train(train_loader, model, criterion, optimizer, epoch):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
-            print('Epoch: [{0}][{1}/{2}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'MAE {mae_errors.val:.3e} ({mae_errors.avg:.3e})'.format(
-                  epoch, i, len(train_loader), batch_time=batch_time,
-                  data_time=data_time, loss=losses, mae_errors=mae_errors), flush = True)
+    print('Epoch: {epoch:6d}\t'
+          'Time {batch_time.avg:.3f} ({batch_time.count:6d})\t'
+          'Data {data_time.avg:.3f} ({data_time.count:6d})\t'
+          'Loss {loss.avg:.4f} ({loss.count:6d})\t'
+          'MAE {mae_errors.avg:.3e} ({mae_errors.count:6d})'.format(
+           epoch=epoch, batch_time=batch_time,
+           data_time=data_time, loss=losses, mae_errors=mae_errors), flush = True)
 
 
-def validate(val_loader, model, criterion, test=False):
+def validate(val_loader, model, criterion, epoch, test=False):
     batch_time = AverageMeter()
     losses = AverageMeter()
     mae_errors = AverageMeter()
@@ -246,8 +258,8 @@ def validate(val_loader, model, criterion, test=False):
         if test:
             test_pred = output.data.cpu()
             test_target = targetlist
-            test_pred = denormalize(test_pred)
-            test_target = denormalize(targetlist)
+            #test_pred = denormalize(test_pred)
+            #test_target = denormalize(targetlist)
             test_preds += test_pred.tolist()
             test_targets += test_target.tolist()
 
@@ -256,13 +268,12 @@ def validate(val_loader, model, criterion, test=False):
         batch_time.update(time.time() - end)
         end = time.time()
 
-        if i % args.print_freq == 0:
-            print('Test: [{0}/{1}]\t'
-                  'Time {batch_time.val:.3f} ({batch_time.avg:.3f})\t'
-                  'Loss {loss.val:.4f} ({loss.avg:.4f})\t'
-                  'MAE {mae_errors.val:.3e} ({mae_errors.avg:.3e})'.format(
-                   i, len(val_loader), batch_time=batch_time, loss=losses,
-                   mae_errors=mae_errors), flush = True)
+    print('Epoch: {epoch:6d}\t'
+          'Time {batch_time.avg:.3f} ({batch_time.count:6d})\t'
+          'Loss {loss.avg:.4f} ({loss.count:6d})\t'
+          'MAE {mae_errors.avg:.3e} ({mae_errors.count:6d})'.format(
+           epoch=epoch, batch_time=batch_time, loss=losses,
+           mae_errors=mae_errors), flush = True)
 
     if test:
         star_label = '**'
@@ -273,8 +284,8 @@ def validate(val_loader, model, criterion, test=False):
     else:
         star_label = '*'
         
-    print(' {star} MAE {mae_errors.avg:.3e}'.format(star=star_label,
-                                                        mae_errors=mae_errors), flush = True)
+    #print(' {star} MAE {mae_errors.avg:.3e}'.format(star=star_label,
+    #                                                    mae_errors=mae_errors), flush = True)
     return mae_errors.avg
 
 
@@ -289,8 +300,8 @@ def mae(prediction, target):
     target: torch.Tensor (N, 1)
     """
     # do de-normalization
-    prediction = denormalize(prediction)
-    target = denormalize(target)
+    #prediction = denormalize(prediction)
+    #target = denormalize(target)
 
     return torch.mean(torch.abs(target - prediction))
 
