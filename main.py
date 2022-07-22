@@ -76,16 +76,16 @@ def main():
     #torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(True)
 
-
     # load data
-    dataset = polygrainzipdata(args.group)
+    train_ds = polygrainzipdata('../elatraindata.npz')
+    valid_ds = polygrainzipdata('../elavaliddata.npz')
+    test_ds = polygrainzipdata('../elatestdata.npz')
     # data split
-    train_loader, val_loader, test_loader = get_train_val_test_loader(
-        dataset, args.random_seed, args.batch_size, args.train_ratio, args.val_ratio, args.cuda)
+    train_loader, val_loader, test_loader = get_train_val_test_loader(train_ds, valid_ds, test_ds, args.batch_size, args.cuda)
 
     # build model
     # get the number of node feature and edge feature
-    nfeature, _, efeature, _ = dataset[0]
+    nfeature, _, efeature, _ = train_ds[0]
     orig_atom_fea_len = nfeature.shape[1]
     edge_fea_len = efeature.shape[2]
     # build model
@@ -154,7 +154,7 @@ def main():
 
     # test best model
     print('---------Evaluate Model on Test Set---------------', flush = True)
-    best_checkpoint = torch.load('model_best.pth.tar')
+    best_checkpoint = torch.load('checkpoint.pth.tar')
     model.load_state_dict(best_checkpoint['state_dict'])
     validate(test_loader, model, criterion, epoch, test=True)
 
