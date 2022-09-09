@@ -1,25 +1,56 @@
-# Prediction the conductivity of polycrystalline materials
-### 1. Generate three-dimensional polycrystalline structure with different parameters in the grain growth model
+# Polygrain Graph Neural Network 
+
+This repo contains the code base for the paper [***"Polygrain Graph Neural Network"***]()
+by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/), 
+[Mehmet F. Demirel](http://cs.wisc.edu/~demirel), 
+[Xuanhan Liu](https://www.linkedin.com/in/xuanhan-liu-2976b3218/),
+[Yingyu Liang](http://cs.wisc.edu/~yliang), 
+[Jiamian Hu](https://mesomod.weebly.com/people.html).
+
+## Table of Contents
+
+- [Prerequisites](#prerequisites)
+- [Data Generation](#data-generation)
+  - [Polygrain Microstructure Generation](#polygrain-microstructure-generation)
+  - [Materials Property calculation](#materials-property-calculation)
+  - [Available dataset](#available-dataset)
+- [Polygrain Graph Neural Network](#polygrain-graph-neural-network)
+  - [PGNN architecture](#pgnn-architecture)
+  - [Train a PGNN model](#train-a-pgnn-model)
+  - [Available trained model weight](#available-trained-model-weight)
+
+## Prerequisites
+- Python == 3
+- [Pytorch](https://pytorch.org/) == 1.10.1
+- [Scikit-Learn](https://scikit-learn.org/stable/) 
+
+Those packages can be installed in a new anaconda environment named pgnn through
 ```
-python changepara.py
+conda create --name pgnn
+conda activate pgnn
+conda install python=3 scikit-learn pytorch==1.10.1 torchvision -c pytorch -c conda-forge
 ```
-### 2. Convert and collect the data of polycrystalline structure
-```
-python dataconvert.py
-```
-### 3. Calculate the conductivity of the polycrystalline microstructures with different conductivity of Grain and Grain boundary
-```
-python changecond.py
-```
-### 4. Collect the conductivity data
-```
-python readcond.py
-```
-### 5. Perform GNN training
-```
-python main.py
-```
-#### To run it on Euler GPU
-```
-sbatch run.sh
-```
+
+
+
+### 
+## Data Generation
+
+### Polygrain Microstructure Generation
+
+### Materials Property calculation
+
+### Available dataset
+
+## Polygrain Graph Neural Network
+
+### PGNN architecture
+
+### Train a PGNN model
+
+### Available trained model weight
+
+
+
+
+
