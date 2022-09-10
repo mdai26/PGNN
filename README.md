@@ -170,7 +170,7 @@ python main.py --load_model=checkpoint.pth.tar
 ```
 ## License
 
-CGCNN is released under the MIT License.
+PGNN is released under the MIT License.
 
 
 
