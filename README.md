@@ -1,6 +1,6 @@
 # Polycrystal Graph Neural Network 
 
-This repo contains the code base for the paper [***"Polygrain Graph Neural Network"***]()
+This repo contains the code base for the paper [***"Polycrystal Graph Neural Network"***]()
 by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/), 
 [Mehmet F. Demirel](http://cs.wisc.edu/~demirel), 
 [Xuanhan Liu](https://www.linkedin.com/in/xuanhan-liu-2976b3218/),
