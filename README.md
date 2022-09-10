@@ -1,4 +1,4 @@
-# Polygrain Graph Neural Network 
+# Polycrystal Graph Neural Network 
 
 This repo contains the code base for the paper [***"Polygrain Graph Neural Network"***]()
 by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/), 
@@ -11,10 +11,10 @@ by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/),
 
 - [Prerequisites](#prerequisites)
 - [Data Generation](#data-generation)
-  - [Polygrain Microstructure Generation](#polygrain-microstructure-generation)
+  - [Polycrystal Microstructure Generation](#polycrystal-microstructure-generation)
   - [Materials Property calculation](#materials-property-calculation)
   - [Available dataset](#available-dataset)
-- [Polygrain Graph Neural Network](#polygrain-graph-neural-network)
+- [Polycrystal Graph Neural Network](#polycrystal-graph-neural-network)
   - [PGNN architecture](#pgnn-architecture)
   - [Train a PGNN model](#train-a-pgnn-model)
   - [Available trained model weight](#available-trained-model-weight)
@@ -39,7 +39,7 @@ conda install python=3 scikit-learn pytorch==1.10.1 torchvision -c pytorch -c co
 
 ![Data Generation](https://github.com/mdai26/PGNN/blob/main/Images/figure1.png)
 
-### Polygrain Microstructure Generation
+### Polycrystal Microstructure Generation
 
 The 3D polygrain microstructure is generated through [Voronoi Tessellation](https://en.wikipedia.org/wiki/Voronoi_diagram). The code can be found in the folder [VoronoiGrain](https://github.com/mdai26/PGNN/tree/main/Voronoigrain).
 
@@ -133,7 +133,7 @@ Note that the CNN and GNN dataset are for the same 5000 raw data points. The dat
     targetlist = GNNdata['targetlist']
     ```
 
-## Polygrain Graph Neural Network
+## Polycrystal Graph Neural Network
 
 The code of the PGNN model is developed based on the code of [CGCNN model](https://github.com/txie-93/cgcnn).
 
