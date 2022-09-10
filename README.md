@@ -36,6 +36,8 @@ conda install python=3 scikit-learn pytorch==1.10.1 torchvision -c pytorch -c co
 ### 
 ## Data Generation
 
+![Data Generation](https://github.com/mdai26/PGNN/blob/main/Images/figure1.png)
+
 ### Polygrain Microstructure Generation
 
 The 3D polygrain microstructure is generated through [Voronoi Tessellation](https://en.wikipedia.org/wiki/Voronoi_diagram). The code can be found in the folder [VoronoiGrain](https://github.com/mdai26/PGNN/tree/main/Voronoigrain).
@@ -90,10 +92,7 @@ The dataset of the 5000 microstructures can be downloaded through this [Link]().
 
 ### PGNN architecture
 
-
-
-
-
+![PGNN](https://github.com/mdai26/PGNN/blob/main/Images/figure2.png)
 
 ### Train a PGNN model
 
@@ -106,13 +105,13 @@ The dataset of the 5000 microstructures can be downloaded through this [Link]().
   - data.py
 - Train the model from scratch
   - activate conda envirnoment if not
-  ```
-  conda activate pgnn
-  ```
+    ```
+    conda activate pgnn
+    ```
   - train the model from the scratch (the default parameters are the optimized hyperparameters stated in the paper)
-  ```
-  python main.py
-  ```
+    ```
+    python main.py
+    ```
 
 ### Available trained model weight
 
