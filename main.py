@@ -28,8 +28,8 @@ parser.add_argument('--val_ratio', default=0.1, type=float, help='ratio of valid
 # parameters for model
 parser.add_argument('--node-fea-len', default=64, type=int, help='number of hidden node features in conv layers')
 parser.add_argument('--h-fea-len', default=128, type=int, help='number of hidden features after pooling')
-parser.add_argument('--n-conv', default=3, type=int, help='number of conv layers')
-parser.add_argument('--n-h', default=1, type=int, help='number of hidden layers after pooling')
+parser.add_argument('--n-conv', default=2, type=int, help='number of conv layers')
+parser.add_argument('--n-h', default=2, type=int, help='number of hidden layers after pooling')
 # parameters for using CUDA or not
 parser.add_argument('--disable-cuda', action='store_true',help='Disable CUDA')
 # parameters for optimizer
@@ -77,9 +77,9 @@ def main():
     torch.use_deterministic_algorithms(True)
 
     # load data
-    train_ds = polygrainzipdata('../elatraindata.npz')
-    valid_ds = polygrainzipdata('../elavaliddata.npz')
-    test_ds = polygrainzipdata('../elatestdata.npz')
+    train_ds = polygrainzipdata('../../datasplit/GNNtraindata_unscaled.npz')
+    valid_ds = polygrainzipdata('../../datasplit/GNNvaliddata_unscaled.npz')
+    test_ds = polygrainzipdata('../../datasplit/GNNtestdata_unscaled.npz')
     # data split
     train_loader, val_loader, test_loader = get_train_val_test_loader(train_ds, valid_ds, test_ds, args.batch_size, args.cuda)
 
@@ -101,7 +101,8 @@ def main():
         model.cuda()
 
     # define loss func and optimizer
-    criterion = nn.MSELoss()
+    # change to MAE
+    criterion = nn.L1Loss()
     if args.optim == 'SGD':
         optimizer = optim.SGD(model.parameters(), args.lr,
                               momentum=args.momentum,
@@ -154,7 +155,7 @@ def main():
 
     # test best model
     print('---------Evaluate Model on Test Set---------------', flush = True)
-    best_checkpoint = torch.load('checkpoint.pth.tar')
+    best_checkpoint = torch.load('model_best.pth.tar')
     model.load_state_dict(best_checkpoint['state_dict'])
     validate(test_loader, model, criterion, epoch, test=True)
 
