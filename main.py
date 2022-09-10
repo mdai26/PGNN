@@ -77,9 +77,9 @@ def main():
     torch.use_deterministic_algorithms(True)
 
     # load data
-    train_ds = polygrainzipdata('../../datasplit/GNNtraindata_unscaled.npz')
-    valid_ds = polygrainzipdata('../../datasplit/GNNvaliddata_unscaled.npz')
-    test_ds = polygrainzipdata('../../datasplit/GNNtestdata_unscaled.npz')
+    train_ds = polygrainzipdata('GNNtraindata_unscaled.npz')
+    valid_ds = polygrainzipdata('GNNvaliddata_unscaled.npz')
+    test_ds = polygrainzipdata('GNNtestdata_unscaled.npz')
     # data split
     train_loader, val_loader, test_loader = get_train_val_test_loader(train_ds, valid_ds, test_ds, args.batch_size, args.cuda)
 
