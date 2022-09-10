@@ -18,6 +18,7 @@ by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/),
   - [PGNN architecture](#pgnn-architecture)
   - [Train a PGNN model](#train-a-pgnn-model)
   - [Available trained model weight](#available-trained-model-weight)
+- [License](license)
 
 ## Prerequisites
 - Python == 3
@@ -42,12 +43,12 @@ conda install python=3 scikit-learn pytorch==1.10.1 torchvision -c pytorch -c co
 
 The 3D polygrain microstructure is generated through [Voronoi Tessellation](https://en.wikipedia.org/wiki/Voronoi_diagram). The code can be found in the folder [VoronoiGrain](https://github.com/mdai26/PGNN/tree/main/Voronoigrain).
 
-- How to run the code. By default setting, 100 microstructures with the size of 64 x 64 x 64 can be generated. 
+- By default setting, 100 microstructures with the size of 64 x 64 x 64 can be generated through
   ```
   python datageneration.py
   ```
 
-- Change setting of microstructure generation: revise Line #122-#138 of datageneration.py
+- The parameters used for microstructure generation can be changed through revising Line #122-#138 of datageneration.py
   ```
   # set random seed
   random_seed = 10
@@ -82,13 +83,59 @@ The 3D polygrain microstructure is generated through [Voronoi Tessellation](http
 
 ### Materials Property calculation
 
-Both the ionic conductivity and the Young's modulus are calculated through [MuPro](https://www.mupro.co/). The parameters can be found in the paper. Some scripts that help to run the simulation and collect the simulation results on [Euler](https://wacc.wisc.edu/resources/docs/faqs.html) can be found in folder [conductivity](https://github.com/mdai26/PGNN/tree/main/conductivity) and [elastic](https://github.com/mdai26/PGNN/tree/main/elastic)
+Both the ionic conductivity and the Young's modulus are calculated through [MuPro](https://www.mupro.co/). The parameters can be found in the paper. Some scripts that help to run the simulation and collect the simulation results on [Euler](https://wacc.wisc.edu/resources/docs/faqs.html) can be found in folder [conductivity](https://github.com/mdai26/PGNN/tree/main/conductivity) and [elastic](https://github.com/mdai26/PGNN/tree/main/elastic).
 
 ### Available dataset
 
-The dataset of the 5000 microstructures can be downloaded through this [Link]().
+The datasets can be downloaded through this [Link](https://drive.google.com/drive/folders/1ZxbRhB0Q5BLh89LYblG_GZGJsqtsiMuq?usp=sharing).
+
+- **Microstructure - Conductivity Dataset with graph representation (suitable for Graph Neural Network)**: 
+  - GNNtraindata_unscaled.npz (training dataset with 4000 data points)
+  - GNNvaliddata_unscaled.npz (validation dataset with 500 data points)
+  - GNNtestdata_unscaled.npz (testing dataset with 500 data points)
+  - Import the data
+    ```
+    GNNdata = np.load(filename)
+    # node feature matrix
+    nfeature = GNNdata['nfeature']
+    # adjacency matrix
+    neighblist = GNNdata['neighblist']
+    # edge feature matrix
+    efeature = GNNdata['efeature']
+    # Target
+    targetlist = GNNdata['targetlist']
+    ```
+- **Microstructure - Conductivity Dataset with image representation (suitable for Convolutional Neural Network)**
+  - CNNtraindata_unscaled.npz (training dataset with 4000 data points)
+  - CNNvaliddata_unscaled.npz (validation dataset with 500 data points)
+  - CNNtestdata_unscaled.npz (testing dataset with 500 data points)
+  - Import the data
+    ```
+    CNNdata = np.load(filename)
+    # 3D image 
+    image = np.asarray(CNNdata['imagelist'])
+    # target
+    target = np.asarray(CNNdata['targetlist']
+    ```
+Note that the CNN and GNN dataset are for the same 5000 raw data points. The data splits are also same for the two datasets
+- **Microstructure - Young's Modulus dataset with graph representation**
+  - elasticdata.npz (the whole dataset with 604 data points)
+  - Import the data
+    ```
+    GNNdata = np.load(filename)
+    # node feature matrix
+    nfeature = GNNdata['nfeature']
+    # adjacency matrix
+    neighblist = GNNdata['neighblist']
+    # edge feature matrix
+    efeature = GNNdata['efeature']
+    # Target
+    targetlist = GNNdata['targetlist']
+    ```
 
 ## Polygrain Graph Neural Network
+
+The code of the PGNN model is developed based on the code of [CGCNN model](https://github.com/txie-93/cgcnn).
 
 ### PGNN architecture
 
@@ -108,19 +155,22 @@ The dataset of the 5000 microstructures can be downloaded through this [Link]().
     ```
     conda activate pgnn
     ```
-  - train the model from the scratch (the default parameters are the optimized hyperparameters stated in the paper)
+  - train the model from scratch (the default parameters are the optimized hyperparameters stated in the paper)
     ```
     python main.py
     ```
 
 ### Available trained model weight
 
-The available trained model weight using the 5000 microstructure-conductivity dataset can be found through this [link]().
+The available trained model weight using the microstructure-conductivity training dataset can be found through this [link](https://drive.google.com/drive/folders/1ZxbRhB0Q5BLh89LYblG_GZGJsqtsiMuq?usp=sharing).
 
 To load the model weight
 ```
 python main.py --load_model=checkpoint.pth.tar
 ```
+## License
+
+CGCNN is released under the MIT License.
 
 
 
