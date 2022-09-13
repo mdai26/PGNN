@@ -18,6 +18,7 @@ by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/),
   - [PGNN architecture](#pgnn-architecture)
   - [Train a PGNN model](#train-a-pgnn-model)
   - [Available trained model weight](#available-trained-model-weight)
+- [Figure Plot](#figure-plot)
 - [License](license)
 
 ## Prerequisites
@@ -169,6 +170,17 @@ To load the model weight
 ```
 python main.py --load_model=checkpoint.pth.tar
 ```
+## Figure Plot
+- Plot the graph based on the data
+  
+  The microstructure graph can be plotted using the python package [networkx](https://networkx.org/). The code I wrote can be found in the folder [Plot](https://github.com/mdai26/PGNN/blob/main/Plot/graphplot.py).
+
+- Plot the microstructure colored by orientation
+  
+  The code that convert the orientation to RGB colors can be found in the folder [Plot](https://github.com/mdai26/PGNN/blob/main/Plot/microstructure.py). The obtained file 'grain20.vts' can be visualized using [ParaView](https://www.paraview.org/). Note that unchecking "Map Scalars" will visualize the microstructure based on the RGB colors. 
+
+
+
 ## License
 
 PGNN is released under the MIT License.
