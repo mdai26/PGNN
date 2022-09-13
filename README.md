@@ -133,7 +133,7 @@ The datasets can be downloaded through this [Link](https://drive.google.com/driv
     # Target
     targetlist = GNNdata['targetlist']
     ```
-Note that the targets of all the three datasets are not scaled. 
+Note that the input features of all the three datasets are normalized but the targets of all the three datasets are not normalized. 
 
 ## Polycrystal Graph Neural Network
 
@@ -164,7 +164,7 @@ The code of the PGNN model is developed based on the code of [CGCNN model](https
 
 ### Available trained model weight
 
-The available trained model weight using the microstructure-conductivity training dataset can be found through this [link](https://drive.google.com/drive/folders/1ZxbRhB0Q5BLh89LYblG_GZGJsqtsiMuq?usp=sharing). Note that the targets of the dataset are scaled to get the trainable weights. 
+The available trained model weight using the microstructure-conductivity training dataset can be found through this [link](https://drive.google.com/drive/folders/1ZxbRhB0Q5BLh89LYblG_GZGJsqtsiMuq?usp=sharing). Note that the targets of the dataset are min-max normalized to get the trainable weights. 
 
 To load the model weight
 ```
