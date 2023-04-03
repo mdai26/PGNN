@@ -173,7 +173,7 @@ python main.py --load_model=checkpoint.pth.tar
 ## Figure Plot
 - Plot the graph based on the data
   
-  The microstructure graph can be plotted using the python package [networkx](https://networkx.org/). The code I wrote can be found in the folder [Plot](https://github.com/mdai26/PGNN/blob/main/Plot/graphplot.py).
+  The microstructure graph can be plotted using the python package [networkx](https://networkx.org/). The code can be found in the folder [Plot](https://github.com/mdai26/PGNN/blob/main/Plot/graphplot.py).
 
 - Plot the microstructure colored by orientation
   
