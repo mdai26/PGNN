@@ -1,6 +1,7 @@
-# Polycrystal Graph Neural Network 
+# Graph Neural Network for Predicting the Effective Properties of Polycrystalline Materials
 
-This repo contains the code base for the paper [***"Polycrystal Graph Neural Network"***](https://arxiv.org/abs/2209.05583)
+This repo contains the code base for the paper [***"Graph Neural Network for Predicting the Effective Properties of Polycrystalline Materials:
+A Comprehensive Analysis"***]([https://arxiv.org/abs/2209.05583](https://arxiv.org/ftp/arxiv/papers/2209/2209.05583.pdf))
 by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/), 
 [Mehmet F. Demirel](http://cs.wisc.edu/~demirel), 
 [Xuanhan Liu](https://www.linkedin.com/in/xuanhan-liu-2976b3218/),
@@ -11,13 +12,15 @@ by [Minyi Dai](https://www.linkedin.com/in/minyi-dai-7bb82b197/),
 
 - [Prerequisites](#prerequisites)
 - [Data Generation](#data-generation)
-  - [Polycrystal Microstructure Generation](#polycrystal-microstructure-generation)
+  - [Polycrystal Microstructure Generation via Voronoi Tessellation](#polycrystal-microstructure-generation-via-voronoi-tessellation)
+  - [Polycrystal Microstructure Generation via Experimental Data](#polycrystal-microstructure-generation-via-experimental-data)
   - [Materials Property calculation](#materials-property-calculation)
   - [Available dataset](#available-dataset)
 - [Polycrystal Graph Neural Network](#polycrystal-graph-neural-network)
   - [PGNN architecture](#pgnn-architecture)
   - [Train a PGNN model](#train-a-pgnn-model)
   - [Available trained model weight](#available-trained-model-weight)
+- [Sequential Feature Selection](#sequential-feature-selection)
 - [Figure Plot](#figure-plot)
 - [License](license)
 
@@ -33,14 +36,12 @@ conda activate pgnn
 conda install python=3 scikit-learn pytorch==1.10.1 torchvision -c pytorch -c conda-forge
 ```
 
-
-
 ### 
 ## Data Generation
 
 ![Data Generation](https://github.com/mdai26/PGNN/blob/main/Images/figure1.png)
 
-### Polycrystal Microstructure Generation
+### Polycrystal Microstructure Generation via Voronoi Tessellation
 
 The 3D polygrain microstructure is generated through [Voronoi Tessellation](https://en.wikipedia.org/wiki/Voronoi_diagram). The code can be found in the folder [VoronoiGrain](https://github.com/mdai26/PGNN/tree/main/Voronoigrain).
 
@@ -81,6 +82,10 @@ The 3D polygrain microstructure is generated through [Voronoi Tessellation](http
   - **neighbor_${number}.txt**: document the adjacency matrix of the microstructure
 
   - **mark_and_newmark_${number}.vts**: vtk file for plotting through [ParaView](https://www.paraview.org/), mark is the grain label and newmark is the structure id. 
+
+### Polycrystal Microstructure Generation via Experimental Data
+
+The code and instructions can be found in the folder [experidata](https://github.com/mdai26/PGNN/tree/main/experidata).
 
 ### Materials Property calculation
 
@@ -170,6 +175,18 @@ To load the model weight
 ```
 python main.py --load_model=checkpoint.pth.tar
 ```
+
+
+## Sequential Feature Selection
+
+To perform the sequential feature selection, only minor changes of the code are needed. 
+For example, for the first round of grain feature selection with the grain conductivity features, the 28th line of the code "data.py" need to be revised to the following
+```
+self.nfeature = np.array(nfeature)[:,:,7:]
+```
+
+
+
 ## Figure Plot
 - Plot the graph based on the data
   
