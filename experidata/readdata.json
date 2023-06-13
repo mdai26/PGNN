@@ -591,12 +591,17 @@
         "Filter_Uuid": "{5fbf9204-2c6c-597b-856a-f4612adbac38}",
         "MaxValPerLine": 1,
         "OutputFilePath": "C:/Users/daimi",
-        "OutputPath": "D:\\OneDrive - UW-Madison\\project\\ML_polygrain_grainboundary\\rebuttal\\dataset\\3D_EBSD_Dataset_Voxelized\\3D_EBSD_Dataset_Voxelized",
+        "OutputPath": "C:\\Users\\daimi\\Desktop",
         "OutputStyle": 0,
         "SelectedDataArrayPaths": [
             {
                 "Attribute Matrix Name": "CellData",
                 "Data Array Name": "FeatureIds",
+                "Data Container Name": "ImageDataContainer"
+            },
+            {
+                "Attribute Matrix Name": "CellData",
+                "Data Array Name": "EulerAngles",
                 "Data Container Name": "ImageDataContainer"
             }
         ]
